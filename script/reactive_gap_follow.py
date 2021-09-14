@@ -18,9 +18,9 @@ class reactive_follow_gap:
 				1.Setting each value to the mean over some window
 				2.Rejecting high values (eg. > 3m)
 		"""
-		# 140 degrees front angle [110, 250]
+		# 100 degrees front angle [130, 230]
 		scan_range = np.asarray(scan_msg.ranges)
-		ranges = scan_range[int(110/360*scan_range.size)-2:int(250/360*scan_range.size)+3]
+		ranges = scan_range[int(130/360*scan_range.size)-2:int(230/360*scan_range.size)+3]
 		window = 5
 		deno = window*(window+1)/2
 		weight = np.array([1, 2, 3, 4, 5])/deno
@@ -35,7 +35,7 @@ class reactive_follow_gap:
 		# accept distance <= 3
 		filter_rmean = np.array([])
 		for val in rolling_mean:
-			if val > 3:
+			if val > 3: 
 				val = 3
 			filter_rmean = np.append(filter_rmean, val)
 		proc_ranges = filter_rmean
@@ -46,13 +46,13 @@ class reactive_follow_gap:
 		#Eliminate all points inside 'bubble' (set them to zero)
 		min_range = min(proc_ranges)	
 		min_idx = np.argmin(proc_ranges)
-		min_angle = ((min_idx/(proc_ranges.size-1))*140 + 110 - 90)*(np.pi/180)
+		min_angle = ((min_idx/(proc_ranges.size-1))*100 + 130 - 90)*(np.pi/180)
 		min_x = min_range*np.cos(min_angle)
 		min_y = min_range*np.sin(min_angle)
 		radius = 5
 		idx = 0
 		for dist in proc_ranges:
-			angle = ((idx/(proc_ranges.size-1))*140 + 110 - 90)*(np.pi/180)
+			angle = ((idx/(proc_ranges.size-1))*100 + 130 - 90)*(np.pi/180)
 			x = dist*np.cos(angle)
 			y = dist*np.sin(angle)
 			d_square = (x-min_x)**2 + (y-min_y)**2
@@ -159,15 +159,13 @@ class reactive_follow_gap:
 				centerline = len(ranges)/2
 				diff_arr = np.array([])
 				center_max_gap = (max_start_idx + max_end_idx)/2 + start_i
-				if center_max_gap <= (4.5/10)*len(ranges):
-					best_point = 4*(max_start_idx + max_end_idx)/5 + start_i
-				elif (4.5/10)*len(ranges) < center_max_gap < (5.5/10)*len(ranges):
+				if (3.85/10)*len(ranges) < center_max_gap < (6.15/10)*len(ranges):
 					for n in range(max_start_idx, max_end_idx+1):
 						diff = abs(centerline - (n + start_i))
 						diff_arr = np.append(diff_arr, diff)
 					best_point = np.argmin(diff_arr) + max_start_idx + start_i
-				elif center_max_gap >= (5.5/10)*len(ranges):
-					best_point = 1*(max_start_idx + max_end_idx)/5 + start_i
+				elif center_max_gap <= (3.85/10)*len(ranges) or center_max_gap >= (6.15/10)*len(ranges):
+					best_point = 1.1*(max_start_idx + max_end_idx)/5 + start_i 
 		return best_point
 
 	def lidar_callback(self, data):
@@ -180,13 +178,13 @@ class reactive_follow_gap:
 		# Find the best point in the gap
 		best_point = self.find_best_point(start, end, free_ranges)
 		# Publish Drive message
-		angle = ((best_point/(free_ranges.size-1))*140 - 70)*(np.pi/180)
+		angle = ((best_point/(free_ranges.size-1))*100 - 50)*(np.pi/180)
 		if -np.pi/18 < angle < np.pi/18:
-			velocity = 1.5
+			velocity = 5.6
 		elif -np.pi/9 < angle <= -np.pi/18 or np.pi/18 <= angle < np.pi/9:
-			velocity = 1
+			velocity = 4.8
 		else:
-			velocity = 0.5
+			velocity = 2.4
 		drive_msg = AckermannDriveStamped()
 		drive_msg.header.stamp = rospy.Time.now()
 		drive_msg.header.frame_id = "laser"
